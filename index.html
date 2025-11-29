@@ -705,137 +705,149 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+  updateStorageLabels();
+
+  // ---- Hide/show PAT field based on storage selection ----
+  const patField = document.getElementById("patField");
+  if (patField) {
+    // Initial visibility: hide for public, show for private
+    patField.style.display = currentStorage === STORAGE_PUBLIC ? "none" : "block";
+  }
+
+  const storageRadios = document.querySelectorAll("input[name='storage']");
+  storageRadios.forEach((radio) => {
+    radio.addEventListener("change", () => {
+      currentStorage =
+        radio.value === STORAGE_PRIVATE ? STORAGE_PRIVATE : STORAGE_PUBLIC;
+
+      // Hide PAT field for public, show for private
+      if (patField) {
+        patField.style.display =
+          currentStorage === STORAGE_PUBLIC ? "none" : "block";
+      }
+
       updateStorageLabels();
-      const patField = document.getElementById("patField");
-      // Initial state
-      patField.style.display = currentStorage === "public" ? "none" : "block";
-      // When storage changes
-      const storageRadios = document.querySelectorAll("input[name='storage']");
-      storageRadios.forEach(radio => {
-        radio.addEventListener("change", () => {
-          currentStorage = radio.value === "private" ? "private" : "public";
-          // Hide PAT field for public
-          patField.style.display = currentStorage === "public" ? "none" : "block";
-          updateStorageLabels();
-          adminLinks = {};
-          setManageStatus("");
-          document.getElementById("manageSection").style.display = "none";
-          document.getElementById("manageError").style.display = "none";
-          document.getElementById("manageSuccess").style.display = "none";
-        });
-      });
-
-      // Storage radio buttons
-      const storageRadios = document.querySelectorAll("input[name='storage']");
-      storageRadios.forEach(radio => {
-        radio.addEventListener("change", () => {
-          currentStorage = radio.value === STORAGE_PRIVATE ? STORAGE_PRIVATE : STORAGE_PUBLIC;
-          adminLinks = {};
-          setManageStatus("");
-          document.getElementById("manageSection").style.display = "none";
-          document.getElementById("manageError").style.display = "none";
-          document.getElementById("manageSuccess").style.display = "none";
-          updateStorageLabels();
-        });
-      });
-
-      const form = document.getElementById("form");
-      const longUrlInput = document.getElementById("longUrl");
-      const slugInput = document.getElementById("slug");
-      const loadLinksBtn = document.getElementById("loadLinksBtn");
-
-      // Create new link
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const token = getToken();
-        if (!token) {
-          showError("Please paste your GitHub PAT.");
-          return;
-        }
-
-        const normalizedLong = normalizeUrl(longUrlInput.value);
-        if (!normalizedLong) {
-          showError("Please enter a valid URL.");
-          return;
-        }
-
-        let slug = slugInput.value.trim();
-        if (slug) {
-          slug = normalizeSlug(slug);
-          if (!slug) {
-            showError("Custom short name becomes empty after cleaning. Use letters, numbers, and dashes.");
-            return;
-          }
-        }
-
-        try {
-          setLoading(true);
-          document.getElementById("error").style.display = "none";
-
-          await fetchLinksViaApi(token, currentStorage);
-          if (slug && adminLinks[slug] && adminLinks[slug] !== normalizedLong) {
-            showError("Slug '" + slug + "' is already used for another URL.");
-            setLoading(false);
-            return;
-          }
-          if (!slug) {
-            slug = generateRandomSlug(adminLinks);
-          }
-
-          adminLinks[slug] = normalizedLong;
-          rememberTokenIfInlinePresent();
-          await commitLinksViaApi(token, adminLinks, `Add ${currentStorage} short link '${slug}'`, currentStorage);
-
-          const shortUrl = buildShortUrl(slug);
-          showSuccess(
-            'Short URL: <a href="' +
-              shortUrl +
-              '" target="_blank" rel="noopener noreferrer">' +
-              shortUrl +
-              "</a><br />Destination: " +
-              normalizedLong +
-              (currentStorage === STORAGE_PRIVATE
-                ? '<br /><span class="hint">This is a <strong>private</strong> link. It will only resolve in browsers where your PAT is stored.</span>'
-                : '<br /><span class="hint">This is a <strong>public</strong> link. It will work for anyone.</span>')
-          );
-
-          slugInput.value = "";
-        } catch (err) {
-          console.error(err);
-          showError(err.message || "Something went wrong.");
-        } finally {
-          setLoading(false);
-        }
-      });
-
-      // Load & manage existing links
-      loadLinksBtn.addEventListener("click", async () => {
-        const token = getToken();
-        if (!token) {
-          showManageError("Paste your GitHub PAT above to load and manage links.");
-          return;
-        }
-        document.getElementById("manageError").style.display = "none";
-        document.getElementById("manageSuccess").style.display = "none";
-        setManageStatus("Loading " + currentStorage + " links from repo...");
-        try {
-          await fetchLinksViaApi(token, currentStorage);
-          if (!Object.keys(adminLinks).length) {
-            setManageStatus("No links found in the selected links.json. Create one above.");
-          } else {
-            setManageStatus("Loaded " + currentStorage + " links from repository.");
-          }
-          rememberTokenIfInlinePresent();
-          renderManageTable();
-          document.getElementById("manage-links").scrollIntoView({ behavior: "smooth" });
-        } catch (err) {
-          console.error(err);
-          showManageError(err.message || "Failed to load links from selected repo.");
-        } finally {
-          setManageStatus("");
-        }
-      });
+      adminLinks = {};
+      setManageStatus("");
+      document.getElementById("manageSection").style.display = "none";
+      document.getElementById("manageError").style.display = "none";
+      document.getElementById("manageSuccess").style.display = "none";
     });
+  });
+
+  const form = document.getElementById("form");
+  const longUrlInput = document.getElementById("longUrl");
+  const slugInput = document.getElementById("slug");
+  const loadLinksBtn = document.getElementById("loadLinksBtn");
+
+  // ---- Create new link ----
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const token = getToken();
+    if (!token) {
+      showError("Please paste your GitHub PAT.");
+      return;
+    }
+
+    const normalizedLong = normalizeUrl(longUrlInput.value);
+    if (!normalizedLong) {
+      showError("Please enter a valid URL.");
+      return;
+    }
+
+    let slug = slugInput.value.trim();
+    if (slug) {
+      slug = normalizeSlug(slug);
+      if (!slug) {
+        showError(
+          "Custom short name becomes empty after cleaning. Use letters, numbers, and dashes."
+        );
+        return;
+      }
+    }
+
+    try {
+      setLoading(true);
+      document.getElementById("error").style.display = "none";
+
+      await fetchLinksViaApi(token, currentStorage);
+      if (slug && adminLinks[slug] && adminLinks[slug] !== normalizedLong) {
+        showError("Slug '" + slug + "' is already used for another URL.");
+        setLoading(false);
+        return;
+      }
+      if (!slug) {
+        slug = generateRandomSlug(adminLinks);
+      }
+
+      adminLinks[slug] = normalizedLong;
+      rememberTokenIfInlinePresent();
+      await commitLinksViaApi(
+        token,
+        adminLinks,
+        `Add ${currentStorage} short link '${slug}'`,
+        currentStorage
+      );
+
+      const shortUrl = buildShortUrl(slug);
+      showSuccess(
+        'Short URL: <a href="' +
+          shortUrl +
+          '" target="_blank" rel="noopener noreferrer">' +
+          shortUrl +
+          "</a><br />Destination: " +
+          normalizedLong +
+          (currentStorage === STORAGE_PRIVATE
+            ? '<br /><span class="hint">This is a <strong>private</strong> link. It will only resolve in browsers where your PAT is stored.</span>'
+            : '<br /><span class="hint">This is a <strong>public</strong> link. It will work for anyone.</span>')
+      );
+
+      slugInput.value = "";
+    } catch (err) {
+      console.error(err);
+      showError(err.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  // ---- Load & manage existing links ----
+  loadLinksBtn.addEventListener("click", async () => {
+    const token = getToken();
+    if (!token) {
+      showManageError("Paste your GitHub PAT above to load and manage links.");
+      return;
+    }
+    document.getElementById("manageError").style.display = "none";
+    document.getElementById("manageSuccess").style.display = "none";
+    setManageStatus("Loading " + currentStorage + " links from repo...");
+    try {
+      await fetchLinksViaApi(token, currentStorage);
+      if (!Object.keys(adminLinks).length) {
+        setManageStatus(
+          "No links found in the selected links.json. Create one above."
+        );
+      } else {
+        setManageStatus(
+          "Loaded " + currentStorage + " links from repository."
+        );
+      }
+      rememberTokenIfInlinePresent();
+      renderManageTable();
+      document
+        .getElementById("manage-links")
+        .scrollIntoView({ behavior: "smooth" });
+    } catch (err) {
+      console.error(err);
+      showManageError(
+        err.message || "Failed to load links from selected repo."
+      );
+    } finally {
+      setManageStatus("");
+    }
+  });
+});
+
   </script>
 </body>
 </html>
