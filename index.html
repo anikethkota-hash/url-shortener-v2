@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>GitHub Pages URL Shortener</title>
+  <title>Aniketh's Personal URL Shortener</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
@@ -220,37 +220,16 @@
       background:#f3f4f6;
       color:#4b5563;
     }
-
-    /* Smooth show/hide for PAT field */
-    #patField {
-      overflow: hidden;
-      max-height: 200px;
-      opacity: 1;
-      transition:
-        opacity 0.2s ease,
-        max-height 0.2s ease,
-        margin-top 0.2s ease,
-        margin-bottom 0.2s ease;
-    }
-    #patField.pat-hidden {
-      opacity: 0;
-      max-height: 0;
-      margin-top: 0;
-      margin-bottom: 0;
-      pointer-events: none;
-    }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>GitHub Pages URL Shortener</h1>
+    <h1>Aniketh's Personal URL Shortener</h1>
     <p>
       <strong>Public links</strong> are stored in <code>links.json</code> in this public repo (works for everyone).<br />
-      <strong>Private links</strong> are stored in <code>links.json</code> in a separate private repo (works only in your browser with a PAT).<br />
+      <strong>Private links</strong> are stored in <code>links.json</code> in a private repo (works only in browsers where your PAT is configured).<br />
       Short links look like: <code>/slug</code>
     </p>
-
-    <div id="redirect-message" class="error" style="display:none;"></div>
 
     <!-- STORAGE TOGGLE -->
     <div class="storage-toggle">
@@ -271,7 +250,7 @@
       <div class="field">
         <label for="longUrl">Long URL</label>
         <input id="longUrl" type="url" placeholder="https://example.com/very/long/link" required />
-        <div class="hint">If you omit <code>https://</code> it will be added.</div>
+        <div class="hint">Do not omit <code>https://</code> or <code>http://</code> in the URL.</div>
       </div>
 
       <div class="field">
@@ -280,13 +259,12 @@
         <div class="hint">Letters, numbers, dashes only. Leave empty to auto-generate.</div>
       </div>
 
-      <!-- PAT field with animated visibility -->
-      <div class="field" id="patField">
-        <label for="token">GitHub PAT (not stored in repo)</label>
+      <div class="field">
+        <label for="token">GitHub PAT (required to save links)</label>
         <input id="token" type="password" placeholder="github_pat_..." />
         <div class="hint">
-          Token must have <strong>Contents: Read &amp; Write</strong> on both repos you use here.
-          It will also be stored in <code>localStorage</code> on this device so private links can resolve.
+          Token must have <strong>Contents: Read &amp; Write</strong> on the selected repo
+          (public or private). It is also stored in <code>localStorage</code> on this device so private links can resolve.
         </div>
       </div>
 
@@ -733,20 +711,8 @@
       section.style.display = "block";
     }
 
-    // --- PAT show/hide animation helper ---
-    function setPatFieldVisibility() {
-      const patField = document.getElementById("patField");
-      if (!patField) return;
-      if (currentStorage === STORAGE_PUBLIC) {
-        patField.classList.add("pat-hidden");
-      } else {
-        patField.classList.remove("pat-hidden");
-      }
-    }
-
     document.addEventListener("DOMContentLoaded", () => {
       updateStorageLabels();
-      setPatFieldVisibility();
 
       const storageRadios = document.querySelectorAll("input[name='storage']");
       storageRadios.forEach((radio) => {
@@ -754,7 +720,6 @@
           currentStorage =
             radio.value === STORAGE_PRIVATE ? STORAGE_PRIVATE : STORAGE_PUBLIC;
 
-          setPatFieldVisibility();
           updateStorageLabels();
           adminLinks = {};
           setManageStatus("");
