@@ -7,6 +7,10 @@
     "intranet": {
       "url": "https://sites.google.com/contentstack.com/intranet/home",
       "description": "demo"
+    },
+    "demo": {
+      "url": "https://www.loom.com/share/3a0f9e2fa3db41c9afb7f631efde3bf6",
+      "description": "URL Shortener demo"
     }
   }
 }
