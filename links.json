@@ -3,6 +3,10 @@
     "homepage": {
       "url": "https://www.contentstack.com/",
       "description": "Contentstack Homepage"
+    },
+    "test": {
+      "url": "https://www.contentstack.com/",
+      "description": ""
     }
   }
 }
