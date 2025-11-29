@@ -60,13 +60,14 @@
   </div>
 
   <script>
-    // Must match index.html config
-    const PUBLIC_LINKS_PATH   = "links.json";       // file with public links in public repo
+    // ===== MUST MATCH index.html CONFIG =====
+    const PUBLIC_LINKS_PATH   = "links.json";       // public links file in this repo
     const PRIVATE_OWNER       = "anikethkota-hash";  // owner of PRIVATE repo
     const PRIVATE_REPO        = "private-db";
     const PRIVATE_BRANCH      = "main";
     const PRIVATE_LINKS_PATH  = "links.json";
     const TOKEN_STORAGE_KEY   = "urlShortenerPrivateToken";
+    // ========================================
 
     function b64Decode(str) {
       return decodeURIComponent(escape(atob(str)));
@@ -81,7 +82,7 @@
         return;
       }
 
-      // Repo-based pages: /<public-repo>/<slug>
+      // Repo-based GitHub Pages: /<public-repo>/<slug>
       const repoSegment = parts[0];
       const slug = parts.length > 1 ? parts[1] : null;
 
