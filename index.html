@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Aniketh's Personal URL Shortener</title>
+  <title>GitHub Pages URL Shortener</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
@@ -128,7 +128,6 @@
       margin: 1.5rem 0;
     }
 
-    /* Manage table */
     .manage-header {
       display: flex;
       justify-content: space-between;
@@ -221,11 +220,30 @@
       background:#f3f4f6;
       color:#4b5563;
     }
+
+    /* Smooth show/hide for PAT field */
+    #patField {
+      overflow: hidden;
+      max-height: 200px;
+      opacity: 1;
+      transition:
+        opacity 0.2s ease,
+        max-height 0.2s ease,
+        margin-top 0.2s ease,
+        margin-bottom 0.2s ease;
+    }
+    #patField.pat-hidden {
+      opacity: 0;
+      max-height: 0;
+      margin-top: 0;
+      margin-bottom: 0;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Aniketh's Personal URL Shortener</h1>
+    <h1>GitHub Pages URL Shortener</h1>
     <p>
       <strong>Public links</strong> are stored in <code>links.json</code> in this public repo (works for everyone).<br />
       <strong>Private links</strong> are stored in <code>links.json</code> in a separate private repo (works only in your browser with a PAT).<br />
@@ -253,7 +271,7 @@
       <div class="field">
         <label for="longUrl">Long URL</label>
         <input id="longUrl" type="url" placeholder="https://example.com/very/long/link" required />
-        <div class="hint">Do not omit <code>https://</code> or <code>http://</code> in the URL.</div>
+        <div class="hint">If you omit <code>https://</code> it will be added.</div>
       </div>
 
       <div class="field">
@@ -262,12 +280,13 @@
         <div class="hint">Letters, numbers, dashes only. Leave empty to auto-generate.</div>
       </div>
 
+      <!-- PAT field with animated visibility -->
       <div class="field" id="patField">
         <label for="token">GitHub PAT (not stored in repo)</label>
         <input id="token" type="password" placeholder="github_pat_..." />
         <div class="hint">
-            Token must have <strong>Contents: Read &amp; Write</strong> on both repos you use here.
-            It will also be stored in <code>localStorage</code> on this device so private links can resolve.
+          Token must have <strong>Contents: Read &amp; Write</strong> on both repos you use here.
+          It will also be stored in <code>localStorage</code> on this device so private links can resolve.
         </div>
       </div>
 
@@ -662,7 +681,12 @@
           try {
             setManageStatus("Saving changes...");
             rememberTokenIfInlinePresent();
-            await commitLinksViaApi(token, adminLinks, `Update ${currentStorage} short link '${slug}' -> '${newSlug}'`, currentStorage);
+            await commitLinksViaApi(
+              token,
+              adminLinks,
+              `Update ${currentStorage} short link '${slug}' -> '${newSlug}'`,
+              currentStorage
+            );
             showManageSuccess("Updated link '" + newSlug + "'.");
             renderManageTable();
           } catch (err) {
@@ -688,7 +712,12 @@
           try {
             setManageStatus("Deleting link...");
             rememberTokenIfInlinePresent();
-            await commitLinksViaApi(token, adminLinks, `Delete ${currentStorage} short link '${slug}'`, currentStorage);
+            await commitLinksViaApi(
+              token,
+              adminLinks,
+              `Delete ${currentStorage} short link '${slug}'`,
+              currentStorage
+            );
             showManageSuccess("Deleted link '" + slug + "'.");
             renderManageTable();
           } catch (err) {
@@ -704,150 +733,149 @@
       section.style.display = "block";
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-  updateStorageLabels();
-
-  // ---- Hide/show PAT field based on storage selection ----
-  const patField = document.getElementById("patField");
-  if (patField) {
-    // Initial visibility: hide for public, show for private
-    patField.style.display = currentStorage === STORAGE_PUBLIC ? "none" : "block";
-  }
-
-  const storageRadios = document.querySelectorAll("input[name='storage']");
-  storageRadios.forEach((radio) => {
-    radio.addEventListener("change", () => {
-      currentStorage =
-        radio.value === STORAGE_PRIVATE ? STORAGE_PRIVATE : STORAGE_PUBLIC;
-
-      // Hide PAT field for public, show for private
-      if (patField) {
-        patField.style.display =
-          currentStorage === STORAGE_PUBLIC ? "none" : "block";
-      }
-
-      updateStorageLabels();
-      adminLinks = {};
-      setManageStatus("");
-      document.getElementById("manageSection").style.display = "none";
-      document.getElementById("manageError").style.display = "none";
-      document.getElementById("manageSuccess").style.display = "none";
-    });
-  });
-
-  const form = document.getElementById("form");
-  const longUrlInput = document.getElementById("longUrl");
-  const slugInput = document.getElementById("slug");
-  const loadLinksBtn = document.getElementById("loadLinksBtn");
-
-  // ---- Create new link ----
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const token = getToken();
-    if (!token) {
-      showError("Please paste your GitHub PAT.");
-      return;
-    }
-
-    const normalizedLong = normalizeUrl(longUrlInput.value);
-    if (!normalizedLong) {
-      showError("Please enter a valid URL.");
-      return;
-    }
-
-    let slug = slugInput.value.trim();
-    if (slug) {
-      slug = normalizeSlug(slug);
-      if (!slug) {
-        showError(
-          "Custom short name becomes empty after cleaning. Use letters, numbers, and dashes."
-        );
-        return;
-      }
-    }
-
-    try {
-      setLoading(true);
-      document.getElementById("error").style.display = "none";
-
-      await fetchLinksViaApi(token, currentStorage);
-      if (slug && adminLinks[slug] && adminLinks[slug] !== normalizedLong) {
-        showError("Slug '" + slug + "' is already used for another URL.");
-        setLoading(false);
-        return;
-      }
-      if (!slug) {
-        slug = generateRandomSlug(adminLinks);
-      }
-
-      adminLinks[slug] = normalizedLong;
-      rememberTokenIfInlinePresent();
-      await commitLinksViaApi(
-        token,
-        adminLinks,
-        `Add ${currentStorage} short link '${slug}'`,
-        currentStorage
-      );
-
-      const shortUrl = buildShortUrl(slug);
-      showSuccess(
-        'Short URL: <a href="' +
-          shortUrl +
-          '" target="_blank" rel="noopener noreferrer">' +
-          shortUrl +
-          "</a><br />Destination: " +
-          normalizedLong +
-          (currentStorage === STORAGE_PRIVATE
-            ? '<br /><span class="hint">This is a <strong>private</strong> link. It will only resolve in browsers where your PAT is stored.</span>'
-            : '<br /><span class="hint">This is a <strong>public</strong> link. It will work for anyone.</span>')
-      );
-
-      slugInput.value = "";
-    } catch (err) {
-      console.error(err);
-      showError(err.message || "Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  });
-
-  // ---- Load & manage existing links ----
-  loadLinksBtn.addEventListener("click", async () => {
-    const token = getToken();
-    if (!token) {
-      showManageError("Paste your GitHub PAT above to load and manage links.");
-      return;
-    }
-    document.getElementById("manageError").style.display = "none";
-    document.getElementById("manageSuccess").style.display = "none";
-    setManageStatus("Loading " + currentStorage + " links from repo...");
-    try {
-      await fetchLinksViaApi(token, currentStorage);
-      if (!Object.keys(adminLinks).length) {
-        setManageStatus(
-          "No links found in the selected links.json. Create one above."
-        );
+    // --- PAT show/hide animation helper ---
+    function setPatFieldVisibility() {
+      const patField = document.getElementById("patField");
+      if (!patField) return;
+      if (currentStorage === STORAGE_PUBLIC) {
+        patField.classList.add("pat-hidden");
       } else {
-        setManageStatus(
-          "Loaded " + currentStorage + " links from repository."
-        );
+        patField.classList.remove("pat-hidden");
       }
-      rememberTokenIfInlinePresent();
-      renderManageTable();
-      document
-        .getElementById("manage-links")
-        .scrollIntoView({ behavior: "smooth" });
-    } catch (err) {
-      console.error(err);
-      showManageError(
-        err.message || "Failed to load links from selected repo."
-      );
-    } finally {
-      setManageStatus("");
     }
-  });
-});
 
+    document.addEventListener("DOMContentLoaded", () => {
+      updateStorageLabels();
+      setPatFieldVisibility();
+
+      const storageRadios = document.querySelectorAll("input[name='storage']");
+      storageRadios.forEach((radio) => {
+        radio.addEventListener("change", () => {
+          currentStorage =
+            radio.value === STORAGE_PRIVATE ? STORAGE_PRIVATE : STORAGE_PUBLIC;
+
+          setPatFieldVisibility();
+          updateStorageLabels();
+          adminLinks = {};
+          setManageStatus("");
+          document.getElementById("manageSection").style.display = "none";
+          document.getElementById("manageError").style.display = "none";
+          document.getElementById("manageSuccess").style.display = "none";
+        });
+      });
+
+      const form = document.getElementById("form");
+      const longUrlInput = document.getElementById("longUrl");
+      const slugInput = document.getElementById("slug");
+      const loadLinksBtn = document.getElementById("loadLinksBtn");
+
+      // ---- Create new link ----
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const token = getToken();
+        if (!token) {
+          showError("Please paste your GitHub PAT.");
+          return;
+        }
+
+        const normalizedLong = normalizeUrl(longUrlInput.value);
+        if (!normalizedLong) {
+          showError("Please enter a valid URL.");
+          return;
+        }
+
+        let slug = slugInput.value.trim();
+        if (slug) {
+          slug = normalizeSlug(slug);
+          if (!slug) {
+            showError(
+              "Custom short name becomes empty after cleaning. Use letters, numbers, and dashes."
+            );
+            return;
+          }
+        }
+
+        try {
+          setLoading(true);
+          document.getElementById("error").style.display = "none";
+
+          await fetchLinksViaApi(token, currentStorage);
+          if (slug && adminLinks[slug] && adminLinks[slug] !== normalizedLong) {
+            showError("Slug '" + slug + "' is already used for another URL.");
+            setLoading(false);
+            return;
+          }
+          if (!slug) {
+            slug = generateRandomSlug(adminLinks);
+          }
+
+          adminLinks[slug] = normalizedLong;
+          rememberTokenIfInlinePresent();
+          await commitLinksViaApi(
+            token,
+            adminLinks,
+            `Add ${currentStorage} short link '${slug}'`,
+            currentStorage
+          );
+
+          const shortUrl = buildShortUrl(slug);
+          showSuccess(
+            'Short URL: <a href="' +
+              shortUrl +
+              '" target="_blank" rel="noopener noreferrer">' +
+              shortUrl +
+              "</a><br />Destination: " +
+              normalizedLong +
+              (currentStorage === STORAGE_PRIVATE
+                ? '<br /><span class="hint">This is a <strong>private</strong> link. It will only resolve in browsers where your PAT is stored.</span>'
+                : '<br /><span class="hint">This is a <strong>public</strong> link. It will work for anyone.</span>')
+          );
+
+          slugInput.value = "";
+        } catch (err) {
+          console.error(err);
+          showError(err.message || "Something went wrong.");
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      // ---- Load & manage existing links ----
+      loadLinksBtn.addEventListener("click", async () => {
+        const token = getToken();
+        if (!token) {
+          showManageError("Paste your GitHub PAT above to load and manage links.");
+          return;
+        }
+        document.getElementById("manageError").style.display = "none";
+        document.getElementById("manageSuccess").style.display = "none";
+        setManageStatus("Loading " + currentStorage + " links from repo...");
+        try {
+          await fetchLinksViaApi(token, currentStorage);
+          if (!Object.keys(adminLinks).length) {
+            setManageStatus(
+              "No links found in the selected links.json. Create one above."
+            );
+          } else {
+            setManageStatus(
+              "Loaded " + currentStorage + " links from repository."
+            );
+          }
+          rememberTokenIfInlinePresent();
+          renderManageTable();
+          document
+            .getElementById("manage-links")
+            .scrollIntoView({ behavior: "smooth" });
+        } catch (err) {
+          console.error(err);
+          showManageError(
+            err.message || "Failed to load links from selected repo."
+          );
+        } finally {
+          setManageStatus("");
+        }
+      });
+    });
   </script>
 </body>
 </html>
