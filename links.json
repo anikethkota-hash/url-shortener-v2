@@ -1,12 +1,5 @@
 {
   "links": {
-    "homepage": {
-      "url": "https://www.contentstack.com/",
-      "description": "Contentstack Homepage",
-      "tags": [],
-      "createdAt": "2025-11-30T12:43:58.546Z",
-      "updatedAt": "2025-11-30T12:43:58.546Z"
-    },
     "intranet": {
       "url": "https://sites.google.com/contentstack.com/intranet/home",
       "description": "demo",
