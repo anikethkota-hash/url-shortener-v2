@@ -240,11 +240,30 @@
       font-size:0.8rem;
       background:#fff;
     }
+
+    .search-box {
+      display:flex;
+      align-items:center;
+      gap:0.4rem;
+      font-size:0.8rem;
+    }
+    .search-box input {
+      padding:0.25rem 0.45rem;
+      border-radius:0.5rem;
+      border:1px solid #d1d5db;
+      font-size:0.8rem;
+      min-width:180px;
+    }
+    .search-box input:focus {
+      outline:none;
+      border-color:#6366f1;
+      box-shadow:0 0 0 1px #6366f1;
+    }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Aniketh's Personal URL Shortener URL Shortener</h1>
+    <h1>Aniketh's Personal URL Shortener</h1>
     <p>
       Public links are stored in a public repo.<br />
       Private links are stored in a private repo.<br />
@@ -323,13 +342,24 @@
 
     <div style="margin-top:0.5rem;display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;">
       <div id="manageStatus" class="hint"></div>
-      <div class="sort-controls">
-        <span>Sort by:</span>
-        <select id="sortSelect">
-          <option value="slug">Slug (A–Z)</option>
-          <option value="updatedAtDesc">Last updated (newest first)</option>
-          <option value="createdAtDesc">Created (newest first)</option>
-        </select>
+
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <div class="search-box">
+          <span>Search:</span>
+          <input
+            id="searchInput"
+            type="text"
+            placeholder="Slug, URL, description, tags..."
+          />
+        </div>
+        <div class="sort-controls">
+          <span>Sort by:</span>
+          <select id="sortSelect">
+            <option value="slug">Slug (A–Z)</option>
+            <option value="updatedAtDesc">Last updated (newest first)</option>
+            <option value="createdAtDesc">Created (newest first)</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -365,13 +395,13 @@
     // ===== CONFIG – EDIT THESE TO MATCH YOUR REPOS =====
     // Public links repo (can be different from the Pages repo)
     const PUBLIC_OWNER  = "anikethkota-hash";        // e.g. "anikethshenoy"
-    const PUBLIC_REPO   = "url-shortener";   // e.g. "url-shortener-public"
+    const PUBLIC_REPO   = "url-shortener";           // e.g. "url-shortener-public"
     const PUBLIC_BRANCH = "main";
     const PUBLIC_LINKS_PATH = "links.json";
 
     // Private links repo
-    const PRIVATE_OWNER  = "anikethkota-hash";      // often same as PUBLIC_OWNER
-    const PRIVATE_REPO   = "private-db"; // e.g. "url-shortener-private"
+    const PRIVATE_OWNER  = "anikethkota-hash";       // often same as PUBLIC_OWNER
+    const PRIVATE_REPO   = "private-db";             // e.g. "url-shortener-private"
     const PRIVATE_BRANCH = "main";
     const PRIVATE_LINKS_PATH = "links.json";
 
@@ -389,6 +419,7 @@
 
     let currentStorage = STORAGE_PUBLIC;
     let currentSort = "slug"; // slug | updatedAtDesc | createdAtDesc
+    let currentSearch = "";   // free-text filter across slug, url, desc, tags
 
     // Base URL for short links (derived from where this UI is hosted)
     const BASE_URL = (() => {
@@ -684,13 +715,29 @@
 
     function renderManageTable() {
       const c = getCache(currentStorage);
-      let entries = Object.entries(c.links || {});
       const section = document.getElementById("manageSection");
       const tbody = document.getElementById("manageTableBody");
       const countPill = document.getElementById("count-pill");
 
+      let entries = Object.entries(c.links || {});
+
+      // Apply search filter if present
+      const query = currentSearch.trim().toLowerCase();
+      if (query) {
+        entries = entries.filter(([slug, obj]) => {
+          const url = obj.url || "";
+          const desc = obj.description || "";
+          const tagsStr = tagsToString(obj.tags || []);
+          const haystack =
+            (slug + " " + url + " " + desc + " " + tagsStr).toLowerCase();
+          return haystack.includes(query);
+        });
+      }
+
       tbody.innerHTML = "";
-      if (!entries.length) {
+
+      // If no entries at all in the store
+      if (!Object.keys(c.links || {}).length) {
         section.style.display = "block";
         countPill.textContent = "0 links";
 
@@ -701,6 +748,23 @@
         td.style.textAlign = "center";
         td.style.color = "#6b7280";
         td.textContent = "No links found. The selected links.json file is currently empty.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
+
+      // If store has links but none match the search
+      if (!entries.length) {
+        section.style.display = "block";
+        countPill.textContent = "0 matching links";
+
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 7;
+        td.style.padding = "0.8rem";
+        td.style.textAlign = "center";
+        td.style.color = "#6b7280";
+        td.textContent = "No links match the current search.";
         tr.appendChild(td);
         tbody.appendChild(tr);
         return;
@@ -889,9 +953,15 @@
       const tagsInputCreate = document.getElementById("tags");
       const loadLinksBtn = document.getElementById("loadLinksBtn");
       const sortSelect = document.getElementById("sortSelect");
+      const searchInput = document.getElementById("searchInput");
 
       sortSelect.addEventListener("change", () => {
         currentSort = sortSelect.value;
+        renderManageTable();
+      });
+
+      searchInput.addEventListener("input", () => {
+        currentSearch = searchInput.value || "";
         renderManageTable();
       });
 
