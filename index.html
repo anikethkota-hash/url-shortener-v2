@@ -259,6 +259,16 @@
       border-color:#6366f1;
       box-shadow:0 0 0 1px #6366f1;
     }
+    .search-btn {
+      padding:0.25rem 0.6rem;
+      font-size:0.75rem;
+      border-radius:999px;
+      background:#e5e7eb;
+      color:#111827;
+    }
+    .search-btn:hover:not([disabled]) {
+      background:#d1d5db;
+    }
   </style>
 </head>
 <body>
@@ -343,7 +353,11 @@
     <div style="margin-top:0.5rem;display:flex;justify-content:space-between;align-items:center;gap:0.75rem;flex-wrap:wrap;">
       <div id="manageStatus" class="hint"></div>
 
-      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+      <!-- Search + sort controls (shown only after links are loaded) -->
+      <div
+        id="manageControls"
+        style="display:none;align-items:center;gap:0.75rem;flex-wrap:wrap;"
+      >
         <div class="search-box">
           <span>Search:</span>
           <input
@@ -351,6 +365,9 @@
             type="text"
             placeholder="Slug, URL, description, tags..."
           />
+          <button type="button" id="searchBtn" class="small-btn search-btn">
+            🔍
+          </button>
         </div>
         <div class="sort-controls">
           <span>Sort by:</span>
@@ -943,6 +960,12 @@
           document.getElementById("manageSection").style.display = "none";
           document.getElementById("manageError").style.display = "none";
           document.getElementById("manageSuccess").style.display = "none";
+
+          // Hide controls when storage changes until links are loaded again
+          const manageControls = document.getElementById("manageControls");
+          if (manageControls) {
+            manageControls.style.display = "none";
+          }
         });
       });
 
@@ -954,15 +977,25 @@
       const loadLinksBtn = document.getElementById("loadLinksBtn");
       const sortSelect = document.getElementById("sortSelect");
       const searchInput = document.getElementById("searchInput");
+      const searchBtn = document.getElementById("searchBtn");
+      const manageControls = document.getElementById("manageControls");
 
       sortSelect.addEventListener("change", () => {
         currentSort = sortSelect.value;
         renderManageTable();
       });
 
-      searchInput.addEventListener("input", () => {
+      // Only search when button is pressed (or Enter key)
+      searchBtn.addEventListener("click", () => {
         currentSearch = searchInput.value || "";
         renderManageTable();
+      });
+
+      searchInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          searchBtn.click();
+        }
       });
 
       // Create new link (description + tags, cross-store slug check)
@@ -1099,6 +1132,12 @@
             );
           }
           rememberTokenIfInlinePresent();
+
+          // Reset search and show controls now that links are in memory
+          currentSearch = "";
+          if (searchInput) searchInput.value = "";
+          if (manageControls) manageControls.style.display = "flex";
+
           renderManageTable();
           document
             .getElementById("manage-links")
